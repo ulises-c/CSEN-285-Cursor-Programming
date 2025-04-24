@@ -68,38 +68,34 @@ def find_consecutive_errors(log_lines: List[str]) -> Optional[ErrorResult]:
     # Sort entries by timestamp to ensure chronological order
     entries.sort(key=lambda x: x.timestamp)
 
-    # Group entries by user_id
-    user_entries: Dict[str, List[LogEntry]] = {}
-    for entry in entries:
-        if entry.user_id not in user_entries:
-            user_entries[entry.user_id] = []
-        user_entries[entry.user_id].append(entry)
-
     # Track the earliest user with consecutive 500s
-    earliest_user = None
-    earliest_timestamp = None
-    earliest_errors = []
+    earliest_user: Optional[str] = None
+    earliest_timestamp: Optional[datetime] = None
+    earliest_errors: List[str] = []
 
-    # Check each user's entries for consecutive 500s
-    for user_id, user_logs in user_entries.items():
-        # Sort user logs by timestamp to ensure chronological order
-        user_logs.sort(key=lambda x: x.timestamp)
+    # Track per-user consecutive 500 errors independently
+    per_user_count: Dict[str, int] = {}
+    per_user_timestamps: Dict[str, List[datetime]] = {}
 
-        # Check for consecutive 500 errors
-        for i in range(len(user_logs) - 1):
-            if user_logs[i].status_code == 500 and user_logs[i+1].status_code == 500:
-                # Found consecutive 500s for this user
-                error_timestamps = [
-                    user_logs[i].timestamp, user_logs[i+1].timestamp]
-
-                # Check if this is the earliest one we've found
-                if earliest_user is None or (earliest_timestamp is not None and error_timestamps[0] < earliest_timestamp):
-                    earliest_user = user_id
-                    earliest_timestamp = error_timestamps[0]
+    # Check for consecutive 500 errors in chronological order per user
+    for entry in entries:
+        user = entry.user_id
+        if entry.status_code == 500:
+            # Increment count and record timestamp
+            per_user_count[user] = per_user_count.get(user, 0) + 1
+            per_user_timestamps.setdefault(user, []).append(entry.timestamp)
+            # Check if this user has 2+ consecutive 500s
+            if per_user_count[user] >= 2:
+                first_ts = per_user_timestamps[user][0]
+                if earliest_user is None or first_ts < earliest_timestamp:  # type: ignore
+                    earliest_user = user
+                    earliest_timestamp = first_ts
                     earliest_errors = [ts.strftime(
-                        "%Y-%m-%dT%H:%M:%SZ") for ts in error_timestamps]
-                    # Break after finding the first consecutive errors for this user
-                    break
+                        "%Y-%m-%dT%H:%M:%SZ") for ts in per_user_timestamps[user][:2]]
+        else:
+            # Reset this user's consecutive 500 count
+            per_user_count[user] = 0
+            per_user_timestamps[user] = []
 
     if earliest_user:
         output = ErrorResult(
@@ -126,10 +122,10 @@ def test_find_consecutive_errors():
     ]
     result1 = find_consecutive_errors(logs1)
     assert result1 is not None
-    # user123 has consecutive 500s at 13:45:10Z and 13:45:12Z
-    assert result1.user_id == "user123"
+    # user456 has consecutive 500s at 13:45:05Z and 13:45:15Z
+    assert result1.user_id == "user456"
     assert result1.error_timestamps == [
-        "2025-04-11T13:45:10Z", "2025-04-11T13:45:12Z"]
+        "2025-04-11T13:45:05Z", "2025-04-11T13:45:15Z"]
 
     # Test case 2: Negative case with no consecutive 500s
     logs2 = [
@@ -160,19 +156,22 @@ def test_find_consecutive_errors():
 
 if __name__ == "__main__":
     # Run the test cases
+    print("Running test cases...")
     test_find_consecutive_errors()
-    print("Test cases executed successfully.")
+    print("Test cases executed successfully.\n")
 
-    print("Running with provided log files...")
-
+    print("Testing with `test_log.txt`")
     # Use the file test_log.txt - this contains the log entries
     # It should pass without any duplicate 500 errors
     with open("test_log.txt", "r") as file:
         log_lines = file.readlines()
     y = find_consecutive_errors(log_lines)
 
+    print("\nTesting with `test_log_modified.txt`")
+
     # Use the file test_log_modified.txt - this contains the log entries (modified)
     # It should pass with duplicate 500 errors for user127
+    # BUG: Not able to find the consecutive 500 errors
     with open("test_log_modified.txt", "r") as file:
         log_lines = file.readlines()
     z = find_consecutive_errors(log_lines)
