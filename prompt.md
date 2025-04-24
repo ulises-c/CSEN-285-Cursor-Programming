@@ -1,71 +1,110 @@
-# Cursor Prompt
+# Web App Log Analyzer - Implementation Prompt
 
-```md
-You are an AI coding assistant. Your task is to write a program that processes a list of web‐app log entries and identifies the first user who experienced two or more consecutive HTTP 500 errors, returning that user’s ID along with the timestamps of those errors.
+## Problem Description
+
+You are given a list of log entries from a web application. Each entry is a string in the format:
+
+```
+[timestamp][user_id][status_code]
+```
+
+Example:
+
+```
+"2025-04-11T13:45:00Z user123 200"
+"2025-04-11T13:45:05Z user456 500"
+"2025-04-11T13:45:10Z user123 500"
+```
 
 ## Requirements
 
-1. **Input**: an array (or list) of strings, each in the format:
+Write a program that:
+
+1. Parses the logs.
+2. Finds the first user who received 2 or more consecutive 500 errors.
+3. Returns the user ID and the list of timestamps for those 500 errors.
+
+## Implementation Guidelines
+
+### Data Structures
+
+You should define appropriate data structures to represent:
+
+- A log entry (with timestamp, user ID, and status code)
+- The result of finding consecutive errors (with user ID and error timestamps)
+
+### Core Functions
+
+Your implementation should include:
+
+1. A function to parse a log line into a structured format
+2. A function to find the first user with consecutive 500 errors
+
+### Algorithm Approach
+
+1. Parse all log entries into structured objects
+2. Sort entries chronologically by timestamp
+3. Track consecutive 500 errors for each user
+4. Return the earliest occurrence of consecutive 500 errors
+
+### Error Handling
+
+Your implementation should handle:
+
+- Invalid log line formats
+- Invalid timestamp formats
+- Non-integer status codes
+- Empty log lists
+
+## Example
+
+For the following log entries:
+
+```
+"2025-04-11T13:45:00Z user123 200"
+"2025-04-11T13:45:05Z user456 500"
+"2025-04-11T13:45:10Z user123 500"
+"2025-04-11T13:45:12Z user123 500"
+"2025-04-11T13:45:15Z user456 500"
 ```
 
-"YYYY-MM-DDThh:mm:ssZ userId statusCode"
+The program should identify that user123 has consecutive 500 errors at timestamps "2025-04-11T13:45:10Z" and "2025-04-11T13:45:12Z".
 
-````text
-- `timestamp` is an ISO-8601 UTC timestamp.
-- `userId` is an alphanumeric string.
-- `statusCode` is an integer (e.g. 200, 404, 500).
+## Testing
 
-2. **Processing**:
-- Parse each log line into its three parts: timestamp, userId, statusCode.
-- Scan through the logs **in chronological order**.
-- Track per-user sequences of consecutive 500 errors.
-- Stop as soon as you find the **first** user who has **two or more** 500s in a row.
+Include test cases for:
 
-3. **Output**:
-- If found, return an object (or struct) with:
-  - `userId`: the ID of that user.
-  - `errorTimestamps`: an array of the consecutive 500-error timestamps for that user.
-- If **no** user has ≥2 consecutive 500s, return `null` or an empty structure.
+1. A positive case with consecutive 500 errors
+2. A negative case with no consecutive 500 errors
+3. A case with multiple users having consecutive 500 errors (should return the earliest one)
 
-4. **Edge cases**:
-- Logs may contain other status codes interleaved.
-- A user may have multiple 500s non-consecutively—only count runs without interruption.
-- Multiple users may have runs; only the **earliest** run (by log order) counts.
+## Language Options
 
-5. **Example**
-```text
-Input:
-[
-  "2025-04-11T13:45:00Z user123 200",
-  "2025-04-11T13:45:05Z user456 500",
-  "2025-04-11T13:45:10Z user123 500",
-  "2025-04-11T13:45:12Z user123 500",
-  "2025-04-11T13:45:15Z user456 500"
-]
+You can implement this in any programming language of your choice. Some suggestions:
 
-Processing:
-- user456: first 500 at 13:45:05Z, but next log for user456 is 13:45:15Z (still 500) → 2 in a row.
-- user123: 500s at 13:45:10Z and 13:45:12Z → also 2 in a row, but those happen *later* in the log.
+- Python
+- JavaScript/TypeScript
+- Go
+- C/C++
+- Java
+- Ruby
 
-Earliest run is user456 at [13:45:05Z, 13:45:15Z].
+## Evaluation Criteria
 
-Output:
-{
-  "userId": "user456",
-  "errorTimestamps": ["2025-04-11T13:45:05Z", "2025-04-11T13:45:15Z"]
-}
-````
+Your solution will be evaluated on:
 
-6. **Deliverables**
-   - Well-structured, commented source code in your language of choice (e.g. Python, JavaScript, Java).
-   - A brief explanation of your approach.
-   - At least one unit test covering:
-     - A positive case (consecutive 500s found).
-     - A negative case (no user has ≥2 consecutive 500s).
+1. Correctness (handles all test cases correctly)
+2. Code organization and readability
+3. Error handling
+4. Performance (efficient algorithm)
+5. Documentation
 
----
+## Bonus Challenges
 
-Please provide the complete implementation, explanation, and tests.
+1. Handle log entries with the same timestamp
+2. Support different log formats
+3. Implement a command-line interface to process log files
+4. Add visualization of the error patterns
 
 ```
 
